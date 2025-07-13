@@ -6,7 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { BookOpen, TrendingUp, Calendar, Award, LogOut, User } from "lucide-react";
 
 const StudentDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   // Mock data for charts
   const marksData = [
@@ -40,11 +40,11 @@ const StudentDashboard = () => {
                 <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{user?.name}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">{profile?.full_name || user?.email}</h1>
                 <p className="text-sm text-gray-600">Class 10-A</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={logout}>
+            <Button variant="outline" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
