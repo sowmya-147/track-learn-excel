@@ -1,193 +1,188 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useStudents } from "../hooks/useStudents";
+import { useAddMark } from "../hooks/useMarks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ClipboardList } from "lucide-react";
-import { Link } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+import { ArrowLeft, BookOpen } from "lucide-react";
 
 const AddMarks = () => {
+  const navigate = useNavigate();
+  const { data: students = [] } = useStudents();
+  const addMarkMutation = useAddMark();
+  
   const [formData, setFormData] = useState({
-    studentName: "",
+    student_id: "",
     subject: "",
-    examType: "",
-    marksObtained: "",
-    maxMarks: ""
+    exam_type: "",
+    marks_obtained: "",
+    max_marks: "",
   });
 
-  // Mock student data
-  const students = [
-    "John Smith", "Sarah Johnson", "Emma Davis", "Michael Brown", "Lisa Wilson",
-    "David Garcia", "Jennifer Martinez", "Robert Taylor", "Amanda Anderson", "Christopher Lee"
-  ];
-
-  const subjects = [
-    "Mathematics", "English", "Science", "History", "Geography", 
-    "Physics", "Chemistry", "Biology", "Computer Science", "Physical Education"
-  ];
-
   const examTypes = ["Midterm", "Final", "Unit Test", "Quiz", "Assignment"];
+  const subjects = ["Mathematics", "English", "Science", "History", "Geography", "Physics", "Chemistry", "Biology"];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.studentName || !formData.subject || !formData.examType || !formData.marksObtained || !formData.maxMarks) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const obtained = parseInt(formData.marksObtained);
-    const maximum = parseInt(formData.maxMarks);
-
-    if (obtained > maximum) {
-      toast({
-        title: "Error",
-        description: "Marks obtained cannot be greater than maximum marks",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const percentage = ((obtained / maximum) * 100).toFixed(1);
-
-    toast({
-      title: "Success",
-      description: `Marks recorded for ${formData.studentName}: ${obtained}/${maximum} (${percentage}%)`
-    });
-
-    // Reset form
-    setFormData({
-      studentName: "",
-      subject: "",
-      examType: "",
-      marksObtained: "",
-      maxMarks: ""
-    });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await addMarkMutation.mutateAsync({
+        student_id: formData.student_id,
+        subject: formData.subject,
+        exam_type: formData.exam_type,
+        marks_obtained: parseInt(formData.marks_obtained),
+        max_marks: parseInt(formData.max_marks),
+      });
+      
+      setFormData({
+        student_id: "",
+        subject: "",
+        exam_type: "",
+        marks_obtained: "",
+        max_marks: "",
+      });
+    } catch (error) {
+      // Error is handled by the mutation
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <Link to="/teacher" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/teacher')}
+            className="mb-4"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Add Student Marks</h1>
-          <p className="text-gray-600">Record student performance for tests and assignments</p>
+          </Button>
+          
+          <h1 className="text-3xl font-bold text-gray-900">Add Student Marks</h1>
+          <p className="text-gray-600 mt-2">Record marks for student assessments.</p>
         </div>
 
-        <Card className="shadow-lg">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-blue-600" />
-              Mark Entry Form
+              <BookOpen className="w-5 h-5" />
+              Mark Entry
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="studentName">Student Name *</Label>
-                <Select value={formData.studentName} onValueChange={(value) => handleInputChange('studentName', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select student" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map((student) => (
-                      <SelectItem key={student} value={student}>{student}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="student_id">Student</Label>
+                  <Select value={formData.student_id} onValueChange={(value) => handleSelectChange('student_id', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a student" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.name} - {student.roll_number}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject *</Label>
-                  <Select value={formData.subject} onValueChange={(value) => handleInputChange('subject', value)}>
+                  <Label htmlFor="subject">Subject</Label>
+                  <Select value={formData.subject} onValueChange={(value) => handleSelectChange('subject', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
                       {subjects.map((subject) => (
-                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="examType">Exam Type *</Label>
-                  <Select value={formData.examType} onValueChange={(value) => handleInputChange('examType', value)}>
+                  <Label htmlFor="exam_type">Exam Type</Label>
+                  <Select value={formData.exam_type} onValueChange={(value) => handleSelectChange('exam_type', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select exam type" />
                     </SelectTrigger>
                     <SelectContent>
                       {examTypes.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="marksObtained">Marks Obtained *</Label>
+                  <Label htmlFor="marks_obtained">Marks Obtained</Label>
                   <Input
-                    id="marksObtained"
+                    id="marks_obtained"
+                    name="marks_obtained"
                     type="number"
-                    min="0"
                     placeholder="Enter marks obtained"
-                    value={formData.marksObtained}
-                    onChange={(e) => handleInputChange('marksObtained', e.target.value)}
+                    value={formData.marks_obtained}
+                    onChange={handleInputChange}
+                    min="0"
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="maxMarks">Maximum Marks *</Label>
+                  <Label htmlFor="max_marks">Maximum Marks</Label>
                   <Input
-                    id="maxMarks"
+                    id="max_marks"
+                    name="max_marks"
                     type="number"
-                    min="1"
                     placeholder="Enter maximum marks"
-                    value={formData.maxMarks}
-                    onChange={(e) => handleInputChange('maxMarks', e.target.value)}
+                    value={formData.max_marks}
+                    onChange={handleInputChange}
+                    min="1"
+                    required
                   />
                 </div>
               </div>
-
-              {formData.marksObtained && formData.maxMarks && (
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Percentage:</strong> {((parseInt(formData.marksObtained) / parseInt(formData.maxMarks)) * 100).toFixed(1)}%
-                  </p>
-                </div>
-              )}
 
               <div className="flex gap-4 pt-4">
-                <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
-                  <ClipboardList className="w-4 h-4 mr-2" />
-                  Submit Marks
+                <Button 
+                  type="submit" 
+                  className="flex-1"
+                  disabled={addMarkMutation.isPending}
+                >
+                  {addMarkMutation.isPending ? "Adding Marks..." : "Add Marks"}
                 </Button>
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setFormData({
-                  studentName: "",
-                  subject: "",
-                  examType: "",
-                  marksObtained: "",
-                  maxMarks: ""
-                })}>
-                  Clear Form
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/teacher')}
+                >
+                  Cancel
                 </Button>
               </div>
             </form>

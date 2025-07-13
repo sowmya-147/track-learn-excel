@@ -1,161 +1,180 @@
 
-import { useAuth } from "../App";
+import { useState } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { useStudents } from "../hooks/useStudents";
+import { useMarks } from "../hooks/useMarks";
+import { useAttendance } from "../hooks/useAttendance";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, Calendar, FileText, UserPlus, ClipboardList, BarChart3, LogOut, Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Users, BookOpen, Calendar, TrendingUp, UserPlus, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const TeacherDashboard = () => {
-  const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
+  const { data: students = [] } = useStudents();
+  const { data: allMarks = [] } = useMarks();
+  const { data: attendanceRecords = [] } = useAttendance();
 
-  const sidebarItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/teacher", active: true },
-    { icon: UserPlus, label: "Add Student", href: "/add-student" },
-    { icon: ClipboardList, label: "Add Marks", href: "/add-marks" },
-    { icon: Calendar, label: "Attendance", href: "/attendance" },
-    { icon: FileText, label: "Reports", href: "/reports" }
-  ];
+  // Calculate statistics
+  const totalStudents = students.length;
+  const averageMarks = allMarks.length > 0 
+    ? (allMarks.reduce((sum, mark) => sum + (mark.marks_obtained / mark.max_marks * 100), 0) / allMarks.length).toFixed(1)
+    : 0;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const todayAttendance = attendanceRecords.filter(record => record.date === today);
+  const presentToday = todayAttendance.filter(record => record.status).length;
+  const attendancePercentage = totalStudents > 0 ? ((presentToday / totalStudents) * 100).toFixed(1) : 0;
 
-  const stats = [
-    { title: "Total Students", value: "142", icon: Users, color: "bg-blue-500" },
-    { title: "Average Performance", value: "87.5%", icon: TrendingUp, color: "bg-green-500" },
-    { title: "Attendance Rate", value: "94.2%", icon: Calendar, color: "bg-purple-500" },
-    { title: "Reports Generated", value: "28", icon: FileText, color: "bg-orange-500" }
-  ];
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md"
-      >
-        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
-
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out`}>
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-800">Teacher Portal</h2>
-          <p className="text-sm text-gray-600">Welcome, {user?.name}</p>
-        </div>
-        
-        <nav className="mt-6">
-          {sidebarItems.map((item) => (
-            <Link
-              key={item.label}
-              to={item.href}
-              className={`flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors ${
-                item.active ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
-              }`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <item.icon className="w-5 h-5 mr-3" />
-              {item.label}
-            </Link>
-          ))}
+      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg">
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-center h-16 px-4 bg-blue-600">
+            <BookOpen className="w-8 h-8 text-white mr-2" />
+            <h1 className="text-xl font-bold text-white">EduTrack</h1>
+          </div>
           
-          <button
-            onClick={logout}
-            className="flex items-center w-full px-6 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors mt-6"
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Logout
-          </button>
-        </nav>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 md:ml-0">
-        <div className="p-6 md:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
-            <p className="text-gray-600">Monitor student performance and manage academic records</p>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat) => (
-              <Card key={stat.title} className="relative overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                      <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    </div>
-                    <div className={`${stat.color} p-3 rounded-full`}>
-                      <stat.icon className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Manage students and academic records</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link to="/add-student">
-                  <Button className="w-full justify-start" variant="outline">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Add New Student
-                  </Button>
-                </Link>
-                <Link to="/add-marks">
-                  <Button className="w-full justify-start" variant="outline">
-                    <ClipboardList className="w-4 h-4 mr-2" />
-                    Record Marks
-                  </Button>
-                </Link>
-                <Link to="/attendance">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Mark Attendance
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest updates and submissions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b">
-                    <span className="text-sm">John Smith submitted Math test</span>
-                    <span className="text-xs text-gray-500">2 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b">
-                    <span className="text-sm">Sarah Johnson marked present</span>
-                    <span className="text-xs text-gray-500">4 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm">New student Emma Davis added</span>
-                    <span className="text-xs text-gray-500">1 day ago</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <nav className="flex-1 px-4 py-6 space-y-2">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-blue-600 bg-blue-50"
+              onClick={() => navigate('/teacher')}
+            >
+              <TrendingUp className="w-4 h-4 mr-3" />
+              Dashboard
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => navigate('/add-student')}
+            >
+              <UserPlus className="w-4 h-4 mr-3" />
+              Add Student
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => navigate('/add-marks')}
+            >
+              <BookOpen className="w-4 h-4 mr-3" />
+              Add Marks
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => navigate('/attendance')}
+            >
+              <Calendar className="w-4 h-4 mr-3" />
+              Attendance
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => navigate('/reports')}
+            >
+              <Users className="w-4 h-4 mr-3" />
+              Reports
+            </Button>
+          </nav>
+          
+          <div className="p-4 border-t">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Main Content */}
+      <div className="ml-64 p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {profile?.full_name || 'Teacher'}!</h1>
+          <p className="text-gray-600 mt-2">Here's what's happening in your classroom today.</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalStudents}</div>
+              <p className="text-xs text-muted-foreground">
+                Active students in your class
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Performance</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{averageMarks}%</div>
+              <p className="text-xs text-muted-foreground">
+                Class average across all subjects
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Attendance</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{attendancePercentage}%</div>
+              <p className="text-xs text-muted-foreground">
+                {presentToday} out of {totalStudents} present
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Frequently used actions to manage your classroom</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Button className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/add-student')}>
+                <UserPlus className="w-6 h-6 mb-2" />
+                Add New Student
+              </Button>
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/add-marks')}>
+                <BookOpen className="w-6 h-6 mb-2" />
+                Record Marks
+              </Button>
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/attendance')}>
+                <Calendar className="w-6 h-6 mb-2" />
+                Mark Attendance
+              </Button>
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" onClick={() => navigate('/reports')}>
+                <Users className="w-6 h-6 mb-2" />
+                View Reports
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

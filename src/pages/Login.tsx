@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useAuth } from "../App";
+import { useAuth } from "../hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,10 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<'student' | 'teacher' | ''>('');
-  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !role) {
       toast({
@@ -25,11 +26,23 @@ const Login = () => {
       });
       return;
     }
-    login(email, password, role as 'student' | 'teacher');
-    toast({
-      title: "Login Successful",
-      description: `Welcome ${role}!`
-    });
+
+    setLoading(true);
+    try {
+      await signIn(email, password, role as 'student' | 'teacher');
+      toast({
+        title: "Login Successful",
+        description: `Welcome ${role}!`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,6 +75,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full"
+                  required
                 />
               </div>
 
@@ -74,6 +88,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full"
+                  required
                 />
               </div>
 
@@ -90,14 +105,18 @@ const Login = () => {
                 </Select>
               </div>
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                Login
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={loading}
+              >
+                {loading ? "Signing in..." : "Login"}
               </Button>
             </form>
 
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium">Demo Credentials:</p>
-              <p className="text-xs text-blue-700 mt-1">Any email/password combination will work</p>
+              <p className="text-sm text-blue-800 font-medium">Demo Instructions:</p>
+              <p className="text-xs text-blue-700 mt-1">Create an account by signing up, or use existing credentials</p>
             </div>
           </CardContent>
         </Card>
